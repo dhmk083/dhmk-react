@@ -1,4 +1,4 @@
-export * from 'ts-essentials'
+export { DeepReadonly } from 'ts-essentials'
 
 export type Fn<T, R> = (...args: T[]) => R
 export type Fn0<T> = () => T

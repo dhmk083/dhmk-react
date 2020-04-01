@@ -1,6 +1,13 @@
 {
   "name": "@dhmk/hooks",
   "version": "0.0.1",
+  "description": "Various React.js hooks",
+  "keywords": [
+    "react",
+    "hooks"
+  ],
+  "homepage": "https://github.com/dhmk083/dhmk-hooks",
+  "bugs": "https://github.com/dhmk083/dhmk-hooks/issues",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "license": "MIT",

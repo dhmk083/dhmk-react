@@ -30,6 +30,12 @@
   const { action1, action2, action3, action4 } = actions // all have stable id
   ```
 
+- `usePrevious(x: T): T | undefined` - returns a value from previous render
+
+- `useEffectPrevious(fn: (prev: ReadonlyArray<T | undefined>) => (Function | void), deps: ReadonlyArray<T>)` - like `useEffect`, but calls an effect function with previous values of dependencies.
+
+- `useUpdate(): () => void` - like class-based component's `forceUpdate`.
+
 ### React Router
 
 - `useRelativeRoute(): { url: Function, path: Function }` - returns an object with two helper functions of type `(relativePath: string) => (path: string)`. They return url/path relative to parent `<Route />`. This is an alternative to `"${math.path}/subpath"` pattern because it handles `/path//subpath` cases by merging consecutive `/`'s.

@@ -53,3 +53,28 @@ export const useLogic: useLogic = (fn, initial) => {
 
   return [state, actionsRef.current] as any
 }
+
+export const usePrevious = <T>(value: T) => {
+  const ref = React.useRef<T>()
+  React.useEffect(() => {
+    ref.current = value
+  })
+  return ref.current
+}
+
+export const useEffectPrevious = <T>(
+  fn: (prevDeps: ReadonlyArray<T | undefined>) => Function | void,
+  deps: ReadonlyArray<T>,
+) => {
+  const prevs = usePrevious(deps)
+  const getPrevs = useGetter(prevs)
+  React.useEffect(() => {
+    fn(getPrevs() || [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps)
+}
+
+export const useUpdate = () => {
+  const [, update] = React.useState(0)
+  return () => update(x => (x + 1) & 0xffffffff) // Prevents reaching MAX_SAFE_INTEGER (can this ever be possible?)
+}

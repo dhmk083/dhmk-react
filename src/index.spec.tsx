@@ -1,13 +1,13 @@
 import React from 'react'
 import { render, act } from '@testing-library/react'
 
-import { useGetter, useLogic } from './index'
+import * as hooks from './index'
 
 test('useGetter', () => {
   const cb = jest.fn()
 
   const Comp = ({ prop }) => {
-    const getProp = useGetter(prop)
+    const getProp = hooks.useGetter(prop)
     cb(getProp)
     return <div>{getProp()}</div>
   }
@@ -30,7 +30,7 @@ test('useLogic', () => {
   let logicActions
 
   const Comp = () => {
-    const [state, actions] = useLogic(
+    const [state, actions] = hooks.useLogic(
       ({ thunk, merge }) => {
         initCb()
 
@@ -82,4 +82,65 @@ test('useLogic', () => {
         return true
       }),
   ).toBe(true)
+})
+
+test('usePrevious', () => {
+  const cb = jest.fn()
+
+  const Comp = ({ count }) => {
+    const prev = hooks.usePrevious(count)
+    cb(prev, count)
+    return null
+  }
+
+  const { rerender } = render(<Comp count={1} />)
+  rerender(<Comp count={2} />)
+
+  expect(cb).toBeCalledTimes(2)
+  expect(cb).nthCalledWith(1, undefined, 1)
+  expect(cb).nthCalledWith(2, 1, 2)
+})
+
+test('useEffectPrevious', () => {
+  const cb = jest.fn()
+
+  const Comp = ({ a, b }) => {
+    hooks.useEffectPrevious(cb, [a, b])
+    return null
+  }
+
+  const { rerender } = render(<Comp a={1} b={1} />)
+  rerender(<Comp a={2} b={1} />)
+  rerender(<Comp a={2} b={2} />)
+
+  expect(cb).toBeCalledTimes(3)
+  rerender(<Comp a={2} b={2} />)
+  expect(cb).toBeCalledTimes(3)
+
+  rerender(<Comp a={2} b={3} />)
+
+  expect(cb).toBeCalledTimes(4)
+
+  expect(cb).nthCalledWith(1, [])
+  expect(cb).nthCalledWith(2, [1, 1])
+  expect(cb).nthCalledWith(3, [2, 1])
+  expect(cb).nthCalledWith(4, [2, 2])
+})
+
+test('useUpdate', () => {
+  const cb = jest.fn()
+  let update
+
+  const Comp = () => {
+    update = hooks.useUpdate()
+    cb()
+    return null
+  }
+
+  render(<Comp />)
+  act(update)
+  act(update)
+  act(update)
+
+  expect(cb).toBeCalledTimes(4)
 })

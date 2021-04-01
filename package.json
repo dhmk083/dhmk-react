@@ -1,6 +1,6 @@
 {
   "name": "@dhmk/hooks",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "Various React.js hooks",
   "keywords": [
     "react",

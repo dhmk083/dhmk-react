@@ -67,3 +67,46 @@ const merge2 = <T>(nextState: Partial<T>, prevState: T) =>
 
 export const useStateMerge = <T>(init: T | (() => T)) =>
   useState2<T, Partial<T>>(init, merge2);
+
+export function usePromise<T, E = any>(p?: Promise<T>) {
+  const [state, setState] = React.useState({
+    isPending: false,
+    value: undefined as T | undefined,
+    error: undefined as E | undefined,
+  });
+  const target = React.useRef(p);
+  const isDisposed = React.useRef(false);
+
+  const setPromise = React.useCallback((p: Promise<T>) => {
+    const canSetState = () => target.current === p && !isDisposed.current;
+
+    target.current = p;
+    setState({
+      isPending: true,
+      value: undefined,
+      error: undefined,
+    });
+    p.then(
+      (value) =>
+        canSetState() &&
+        setState({ isPending: false, value, error: undefined }),
+      (error) =>
+        canSetState() && setState({ isPending: false, value: undefined, error })
+    );
+    return p;
+  }, []);
+
+  React.useEffect(() => {
+    p && setPromise(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p]);
+
+  React.useEffect(
+    () => () => {
+      isDisposed.current = true;
+    },
+    []
+  );
+
+  return [state, setPromise] as const;
+}

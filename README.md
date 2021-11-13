@@ -34,6 +34,18 @@ Like `useState` but with mediation process.
 
 Like `useState` but with shallow merging instead of replacing.
 
+### `usePromise(p?: Promise): [PromiseState, setPromise(p: Promise): Promise]`
+
+```ts
+PromiseState = {
+  isPending: boolean
+  value: T | undefined
+  error: E | undefined
+}
+```
+
+Tracks promise status.
+
 ## Other
 
 ### `<Render>{() => ...}</Render>`

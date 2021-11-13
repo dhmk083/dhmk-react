@@ -1,18 +1,76 @@
-# Var Hooks
+# React hooks and helpers
 
-### Basic
+## Hooks
 
-- `usePrevious(x: T): T | undefined` - returns a value from previous render.
+### `useRefLive(x: T): Ref<T>`
 
-- `useUpdate(): () => void` - like class-based component's `forceUpdate`.
+Returns a ref which is updated after each render.
 
-- `useLatestCallback(fn: T): T` - like `useCallback`, but always calls the latest provided `fn` (no stale closure).
+### `useCallbackLive(fn: T): T`
 
-  Additionally, returned function always has a stable identity, unlike the standard `useCallback`/`useMemo`,
-  which may return a new function in some cases as stated in their docs.
+Returns a function with a stable identity that calls the latest provided `fn` function passing all args to it.
 
-  It's safe to omit the function from the `useEffect` or `useCallback` dependency list.
+> It's safe to omit the function from the `useEffect` or `useCallback` dependency list.
 
-- `useGetter(x: T): () => T` - returns a function with a stable identity that returns an argument provided to it.
+### `useUpdate(): Function`
 
-  It's safe to omit the function from the `useEffect` or `useCallback` dependency list.
+Like class component `forceUpdate`.
+
+### `useGetter(x: T): () => T`
+
+Returns a function with a stable identity that returns an argument provided to it.
+
+> It's safe to omit the function from the `useEffect` or `useCallback` dependency list.
+
+### `useIsomorphicLayoutEffect`
+
+`useLayoutEffect` without warning if used outside browser.
+
+### `useState2(initial, postProcess: (newValue, oldValue) => finalValue)`
+
+Like `useState` but with mediation process.
+
+### `useStateMerge(initial)`
+
+Like `useState` but with shallow merging instead of replacing.
+
+## Other
+
+### `<Render>{() => ...}</Render>`
+
+Useful for using hooks inside a class component.
+
+```jsx
+class extends React.Component {
+  render() {
+    return <Render>{() => {
+      const [count, setCount] = React.usecount(1)
+      this.setCount = setCount // interop with class
+
+      return <p>{count}</p>
+    }}</Render>
+  }
+}
+```
+
+### `effect(reactClassInstance, effectFn, getDeps?): Dispose`
+
+Registers and runs an effect. All effects are automatically disposed on unmount.
+
+`getDeps` is a function that returns an array of dependencies, similar to `React.useEffect`.
+
+```js
+class extends React.Component {
+  componentDidMount() {
+    effect(
+      this,
+      () => {
+        // I will run instantly and then in `componentDidUpdate` if my deps changed
+        return () => {
+          // optional dispose here
+        }
+      },
+      () => [this.props.someValue, this.props.otherValue])
+  }
+}
+```

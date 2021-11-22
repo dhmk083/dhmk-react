@@ -34,6 +34,10 @@ Like `useState` but with mediation process.
 
 Like `useState` but with shallow merging instead of replacing.
 
+### `useEffectUpdate(fn, deps)`
+
+Like `useEffect` but skips first effect invocation.
+
 ### `usePromise(p?: Promise): [PromiseState, setPromise(p: Promise): Promise]`
 
 ```ts

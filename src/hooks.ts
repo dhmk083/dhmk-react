@@ -110,3 +110,19 @@ export function usePromise<T, E = any>(p?: Promise<T>) {
 
   return [state, setPromise] as const;
 }
+
+export function useEffectUpdate(
+  ...args: Parameters<typeof React.useEffect>
+): void;
+export function useEffectUpdate(fn, deps) {
+  const skip = React.useRef(true);
+
+  React.useEffect(() => {
+    if (skip.current) {
+      skip.current = false;
+      return;
+    }
+
+    return fn();
+  }, deps);
+}

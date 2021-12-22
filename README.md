@@ -38,7 +38,7 @@ Like `useState` but with shallow merging instead of replacing.
 
 Like `useEffect` but skips first effect invocation.
 
-### `usePromise(p?: Promise): [PromiseState, setPromise(p: Promise): Promise]`
+### `usePromise(p?: Promise): [PromiseState, setPromise(p?: Promise): Promise]`
 
 ```ts
 PromiseState = {
@@ -90,3 +90,5 @@ class extends React.Component {
   }
 }
 ```
+
+## More inside...

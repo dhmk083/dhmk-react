@@ -68,47 +68,52 @@ const merge2 = <T>(nextState: Partial<T>, prevState: T) =>
 export const useStateMerge = <T>(init: T | (() => T)) =>
   useState2<T, Partial<T>>(init, merge2);
 
-export function usePromise<T, E = any>(p?: Promise<T>) {
+type Capture<T> = {
+  (): void;
+  (p: Promise<T>): Promise<T>;
+};
+
+export function usePromise<T, E = Error>(p?: Promise<T>) {
   const [state, setState] = React.useState({
     isPending: false,
     value: undefined as T | undefined,
     error: undefined as E | undefined,
   });
-  const target = React.useRef(p);
-  const isDisposed = React.useRef(false);
+  const [promise, setPromise] = React.useState(p);
+  const capture: Capture<T> = React.useCallback((p?: Promise<T>) => {
+    setPromise(p);
+    return p;
+  }, []) as any;
 
-  const setPromise = React.useCallback((p: Promise<T>) => {
-    const canSetState = () => target.current === p && !isDisposed.current;
+  React.useEffect(() => {
+    if (!promise)
+      return setState({
+        isPending: false,
+        value: undefined,
+        error: undefined,
+      });
 
-    target.current = p;
+    let isDisposed;
+
     setState({
       isPending: true,
       value: undefined,
       error: undefined,
     });
-    p.then(
+
+    promise.then(
       (value) =>
-        canSetState() &&
-        setState({ isPending: false, value, error: undefined }),
+        !isDisposed && setState({ isPending: false, value, error: undefined }),
       (error) =>
-        canSetState() && setState({ isPending: false, value: undefined, error })
+        !isDisposed && setState({ isPending: false, value: undefined, error })
     );
-    return p;
-  }, []);
 
-  React.useEffect(() => {
-    p && setPromise(p);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p]);
+    return () => {
+      isDisposed = true;
+    };
+  }, [promise]);
 
-  React.useEffect(
-    () => () => {
-      isDisposed.current = true;
-    },
-    []
-  );
-
-  return [state, setPromise] as const;
+  return [state, capture] as const;
 }
 
 export function useEffectUpdate(

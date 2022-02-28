@@ -28,10 +28,12 @@ function defaultHandleChange(ev, setValue) {
   setValue(ev.target.value);
 }
 
+type BaseEvent = { target: { value: string } };
+
 export function useInput(initial = "", handleChange = defaultHandleChange) {
   const [value, setValue] = React.useState(initial);
   const onChange = React.useCallback(
-    (ev) => handleChange(ev, setValue),
+    (ev: BaseEvent) => handleChange(ev, setValue),
     [handleChange]
   );
 

@@ -37,6 +37,8 @@ type StateSetter<S, A = S> = {
 
 type StateSetterArg<S, A = S> = A | ((prevState: S) => A);
 
+type StateGetter<S> = () => S;
+
 export const map =
   <S, A = S>(arg: StateSetterArg<S, A>, fn: (value: A, prevState: S) => S) =>
   (prevState: S): S =>
@@ -45,21 +47,28 @@ export const map =
 export function useState2<S, A = S>(
   init: Init<S>,
   postProcess: (value: A, prevState: S) => S = id as any
-): [S, StateSetter<S, A>] {
+): [S, StateSetter<S, A>, StateGetter<S>] {
   const [state, _setState] = React.useState(init);
 
   const ref = React.useRef({
     postProcess,
+    state,
+
+    getState: () => ref.current.state,
 
     setState: (x: StateSetterArg<S, A>) =>
-      _setState(map(x, ref.current.postProcess)),
+      _setState((old) => {
+        const next = map(x, ref.current.postProcess)(old);
+        ref.current.state = next;
+        return next;
+      }),
   });
 
   React.useEffect(() => {
     ref.current.postProcess = postProcess;
   });
 
-  return [state, ref.current.setState];
+  return [state, ref.current.setState, ref.current.getState];
 }
 
 const merge2 = <T>(nextState: Partial<T>, prevState: T) =>

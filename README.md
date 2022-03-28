@@ -26,11 +26,11 @@ Returns a function with a stable identity that returns an argument provided to i
 
 `useLayoutEffect` without warning if used outside browser.
 
-### `useState2(initial, postProcess: (newValue, oldValue) => finalValue)`
+### `useState2(initial, postProcess: (newValue, oldValue) => finalValue): [state, setState, getState]`
 
-Like `useState` but with mediation process.
+Like `useState` but with mediation process. Also returns state getter function as the third item.
 
-### `useStateMerge(initial)`
+### `useStateMerge(initial): [state, setState, getState]`
 
 Like `useState` but with shallow merging instead of replacing.
 

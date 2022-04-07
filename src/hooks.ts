@@ -140,3 +140,28 @@ export function useEffectUpdate(fn, deps) {
     return fn();
   }, deps);
 }
+
+type EffectResult = ReturnType<Parameters<typeof React.useEffect>[0]>;
+
+export function useEffect2<T extends any[]>(
+  fn: (isInitial: boolean, prevDeps: readonly [...T]) => EffectResult,
+  deps: readonly [...T]
+): void;
+export function useEffect2(fn: (isInitial: boolean) => EffectResult): void;
+export function useEffect2(fn, deps?) {
+  const state = React.useRef({
+    isInitial: true,
+    prevDeps: deps ? ([] as any) : undefined,
+  });
+
+  React.useEffect(() => {
+    const { isInitial, prevDeps } = state.current;
+    state.current = {
+      isInitial: false,
+      prevDeps: deps,
+    };
+
+    return fn(isInitial, prevDeps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}

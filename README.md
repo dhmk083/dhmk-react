@@ -34,6 +34,13 @@ Like `useState` but with mediation process. Also returns state getter function a
 
 Like `useState` but with shallow merging instead of replacing.
 
+### `useEffect2(fn, deps)`
+
+Like `useEffect` but `fn` is called with two arguments:
+
+- `isInitial`: boolean
+- `prevDeps`: [] | undefined
+
 ### `useEffectUpdate(fn, deps)`
 
 Like `useEffect` but skips first effect invocation.

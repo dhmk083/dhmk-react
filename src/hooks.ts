@@ -90,17 +90,17 @@ export function usePromise<T, E = Error>(p?: Promise<T>) {
   });
   const [promise, setPromise] = React.useState(p);
   const capture: Capture<T> = React.useCallback((p?: Promise<T>) => {
-    !isHookDisposed.current && setPromise(p);
+    isMounted.current && setPromise(p);
     return p;
   }, []) as any;
 
-  const isHookDisposed = React.useRef(false);
-  React.useEffect(
-    () => () => {
-      isHookDisposed.current = true;
-    },
-    []
-  );
+  const isMounted = React.useRef(false);
+  React.useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!promise)

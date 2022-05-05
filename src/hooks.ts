@@ -77,6 +77,22 @@ const merge2 = <T>(nextState: Partial<T>, prevState: T) =>
 export const useStateMerge = <T>(init: T | (() => T)) =>
   useState2<T, Partial<T>>(init, merge2);
 
+export const useIsDisposed = () => {
+  const isDisposed = React.useRef(false);
+
+  React.useEffect(() => {
+    // without this line `isDisposed` can become `true`
+    // in <StrictMode />, is it a bug?
+    isDisposed.current = false;
+
+    return () => {
+      isDisposed.current = true;
+    };
+  }, []);
+
+  return isDisposed as { readonly current: boolean };
+};
+
 type Capture<T> = {
   (): void;
   (p: Promise<T>): Promise<T>;
@@ -94,13 +110,7 @@ export function usePromise<T, E = Error>(p?: Promise<T>) {
     return p;
   }, []) as any;
 
-  const isHookDisposed = React.useRef(false);
-  React.useEffect(() => {
-    isHookDisposed.current = false;
-    return () => {
-      isHookDisposed.current = true;
-    };
-  }, []);
+  const isHookDisposed = useIsDisposed();
 
   React.useEffect(() => {
     if (!promise)

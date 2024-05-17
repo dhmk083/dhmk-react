@@ -1,6 +1,6 @@
 {
   "name": "@dhmk/react",
-  "version": "3.7.4",
+  "version": "4.0.0",
   "description": "Various React.js hooks and components",
   "keywords": [
     "react",

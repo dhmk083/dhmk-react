@@ -3,26 +3,16 @@ import React from "react";
 export const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
 
-export const useRefLive = <T>(value: T) => {
+export function useValueAsRef<T>(value: T) {
   const ref = React.useRef(value);
-  React.useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     ref.current = value;
-  });
+  }, [value]);
   return ref;
-};
-
-export const useCallbackLive = <T extends Function>(fn: T): T => {
-  const ref = useRefLive(fn);
-  return React.useRef((...args) => ref.current(...args)).current as any;
-};
-
-export const useGetter = <T>(value: T) => {
-  const ref = useRefLive(value);
-  return React.useRef(() => ref.current).current;
-};
+}
 
 export const useUpdate = () => {
-  const [, update] = React.useReducer((x) => (x + 1) & 0xffffffff, 0); // Prevents reaching MAX_SAFE_INTEGER (can this ever be possible?)
+  const [, update] = React.useReducer(() => ({}), {});
   return update;
 };
 
@@ -44,73 +34,75 @@ export const map =
   (prevState: S): S =>
     fn(typeof arg === "function" ? (arg as any)(prevState) : arg, prevState);
 
-export function useState2<S, A = S>(
+export function useState<S, A = S>(
   init: Init<S>,
-  postProcess: (value: A, prevState: S) => S = id as any
+  postProcess: (value: A, prevState: S) => S = id
 ): [S, StateSetter<S, A>, StateGetter<S>] {
   const [state, _setState] = React.useState(init);
+  const postProcessRef = useValueAsRef(postProcess);
+  const isMounted = useIsMounted();
 
   const ref = React.useRef({
-    postProcess,
     state,
 
     getState: () => ref.current.state,
 
-    setState: (x: StateSetterArg<S, A>) =>
-      _setState((old) => {
-        const next = map(x, ref.current.postProcess)(old);
-        ref.current.state = next;
-        return next;
-      }),
-  });
+    setState: (x: StateSetterArg<S, A>) => {
+      const nextState = (ref.current.state = map(
+        x,
+        postProcessRef.current
+      )(ref.current.state));
 
-  React.useEffect(() => {
-    ref.current.postProcess = postProcess;
+      isMounted() && _setState(nextState);
+    },
   });
 
   return [state, ref.current.setState, ref.current.getState];
 }
 
-const merge2 = <T>(nextState: Partial<T>, prevState: T) =>
+export const mergeLeft = <T>(nextState: Partial<T>, prevState: T) =>
   ({ ...prevState, ...nextState } as T);
 
-export const useStateMerge = <T>(init: T | (() => T)) =>
-  useState2<T, Partial<T>>(init, merge2);
+export const useStateMerge = <S>(
+  init: Init<S>,
+  postProcess: (nextState: S, prevState: S) => Partial<S> = id
+) =>
+  useState<S, Partial<S>>(init, (value, prevState) => {
+    const tmpState = mergeLeft(value, prevState);
+    return mergeLeft(postProcess(tmpState, prevState), tmpState);
+  });
 
-export const useIsDisposed = () => {
-  const isDisposed = React.useRef(false);
+export function useIsMounted() {
+  const ref = React.useRef(false);
 
-  React.useEffect(() => {
-    // without this line `isDisposed` can become `true`
-    // in <StrictMode />, is it a bug?
-    isDisposed.current = false;
+  useIsomorphicLayoutEffect(() => {
+    ref.current = true;
 
     return () => {
-      isDisposed.current = true;
+      ref.current = false;
     };
   }, []);
 
-  return isDisposed as { readonly current: boolean };
-};
+  return React.useRef(() => ref.current).current;
+}
 
-type Capture<T> = {
+type TrackPromise<T> = {
   (): void;
   (p: Promise<T>): Promise<T>;
 };
 
 export function usePromise<T, E = Error>(p?: Promise<T>) {
-  const [state, setState] = React.useState({
+  const [state, setState] = useState({
     isPending: false,
     value: undefined as T | undefined,
     error: undefined as E | undefined,
   });
-  const [promise, setPromise] = React.useState(p);
-  const capture: Capture<T> = React.useCallback((p?: Promise<T>) => {
-    !isHookDisposed.current && setPromise(p);
+  const [promise, setPromise] = useState(p);
+  const promiseRef = useValueAsRef(promise);
+  const trackPromise = React.useCallback((p?: Promise<T>) => {
+    setPromise(p);
     return p;
-  }, []) as any;
-
-  const isHookDisposed = useIsDisposed();
+  }, []) as TrackPromise<T>;
 
   React.useEffect(() => {
     if (!promise)
@@ -120,66 +112,57 @@ export function usePromise<T, E = Error>(p?: Promise<T>) {
         error: undefined,
       });
 
-    let isDisposed;
-
     setState({
       isPending: true,
       value: undefined,
       error: undefined,
     });
 
+    const samePromise = () => promise === promiseRef.current;
+
     promise.then(
       (value) =>
-        !isDisposed && setState({ isPending: false, value, error: undefined }),
+        samePromise() &&
+        setState({ isPending: false, value, error: undefined }),
       (error) =>
-        !isDisposed && setState({ isPending: false, value: undefined, error })
+        samePromise() && setState({ isPending: false, value: undefined, error })
     );
+  }, [promise, promiseRef]);
 
-    return () => {
-      isDisposed = true;
-    };
-  }, [promise]);
-
-  return [state, capture] as const;
+  return [state, trackPromise] as const;
 }
 
-export function useEffectUpdate(
-  ...args: Parameters<typeof React.useEffect>
-): void;
-export function useEffectUpdate(fn, deps) {
-  const skip = React.useRef(true);
+export function useEffect<T extends any[] = []>(
+  fn: (isInitial: boolean, prevDeps: readonly [...T]) => void | (() => void),
+  deps?: readonly [...T]
+) {
+  const defaultDeps = [] as unknown as readonly [...T];
 
-  React.useEffect(() => {
-    if (skip.current) {
-      skip.current = false;
-      return;
-    }
-
-    return fn();
-  }, deps);
-}
-
-type EffectResult = ReturnType<Parameters<typeof React.useEffect>[0]>;
-
-export function useEffect2<T extends any[]>(
-  fn: (isInitial: boolean, prevDeps: readonly [...T]) => EffectResult,
-  deps: readonly [...T]
-): void;
-export function useEffect2(fn: (isInitial: boolean) => EffectResult): void;
-export function useEffect2(fn, deps?) {
-  const state = React.useRef({
+  const ref = React.useRef({
     isInitial: true,
-    prevDeps: deps ? ([] as any) : undefined,
+    prevDeps: defaultDeps,
   });
 
   React.useEffect(() => {
-    const { isInitial, prevDeps } = state.current;
-    state.current = {
+    const { isInitial, prevDeps } = ref.current;
+    ref.current = {
       isInitial: false,
-      prevDeps: deps,
+      prevDeps: deps ?? defaultDeps,
     };
-
     return fn(isInitial, prevDeps);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+const noop = () => {};
+
+export function useRefCallback<T = HTMLElement>(
+  fn: (node: T) => Function,
+  deps = []
+) {
+  const dispose = React.useRef(noop);
+  return React.useCallback((node) => {
+    dispose.current(); // catch?
+    dispose.current = (node && fn(node)) || noop;
   }, deps);
 }

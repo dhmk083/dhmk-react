@@ -1,54 +1,27 @@
 import React from "react";
 
-const None = {};
-
-type StripProps<T> = Record<keyof T, never>;
-
-type DefaultGetter<T> = T extends (...args) => any
-  ? T & StripProps<T> & { useValue: T }
-  : () => T;
-
-export const defaultGetter = <T>(useValue: () => T): DefaultGetter<T> => {
-  const useGetter = (...args) => {
-    const value = useValue();
-    return typeof value === "function" ? value(...args) : value;
-  };
-
-  useGetter.useValue = useValue;
-
-  return useGetter as any;
-};
-
 export function createContext<
   T,
   A extends any[] = [],
-  G extends (...args) => any = DefaultGetter<T>
->(conf: {
-  useArgs?: () => [...A];
+  G extends (...args) => any = () => T
+>({
+  fn,
+  useArgs = () => [] as unknown as A,
+  getter = ((x) => x) as G,
+}: {
   fn: (...args: A) => T;
+  useArgs?: () => A;
   getter?: (useValue: () => T) => G;
 }) {
-  let defaultValue = None as T;
-  const context = React.createContext<T>(defaultValue);
-  const useArgs = conf.useArgs ?? (() => [] as unknown as A);
+  let defaultValue: T;
+  const Context = React.createContext(defaultValue!);
 
-  const useValue = () => {
-    let value = React.useContext(context);
+  function useContext() {
     const args = useArgs();
+    return (
+      React.useContext(Context) ?? defaultValue ?? (defaultValue = fn(...args))
+    );
+  }
 
-    if (value === None) {
-      if (defaultValue === None) {
-        defaultValue = conf.fn(...args);
-      }
-
-      value = defaultValue;
-    }
-
-    return value;
-  };
-
-  return [(conf.getter ?? defaultGetter)(useValue), context.Provider] as [
-    G,
-    typeof context.Provider
-  ];
+  return [getter(useContext), Context.Provider] as const;
 }

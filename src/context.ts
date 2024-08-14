@@ -10,7 +10,7 @@ export function createContext<
   getter = ((x) => x) as G,
 }: {
   fn: (...args: A) => T;
-  useArgs?: () => A;
+  useArgs?: () => [...A];
   getter?: (useValue: () => T) => G;
 }) {
   let defaultValue: T;
